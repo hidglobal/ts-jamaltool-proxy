@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const axios = require('axios');
 const app = express();
 var cors = require('cors');
+const req = require('express/lib/request');
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -275,7 +276,7 @@ app.post("/createAuthenticator",(req,res)=>{
             }
           ).then(function(response) {
               
-              createAuthenticatorData = "Password Authenticator for " + userId + " was created";
+              createAuthenticatorData = "Successfully created password authenticator for " + userId + " user.";
               res.send(createAuthenticatorData);
               console.log(createAuthenticatorData);
               console.log(response);
@@ -294,24 +295,53 @@ app.post("/createAuthenticator",(req,res)=>{
 
   });
 
-/*
- * 
- * Create Authenticator for given Id of User.
- * 
- * This Function is creating an Password authenticator for a User, using the policy AT_STDPWD. Other policies an credential types are available, 
- * check the other samples for more information. 
- * 
- * The policies for Password: 
- * - AT_STDPWD - User Static Password
- * - AT_RESPWD - User Static Password Restricted
- * - AT_EMPPSHO - Employee Static Password Short
- * 
- * After a successful creation, all tables on the page are refreshed. 
- * 
- */
+// Test Password Authenticator.
+
+app.post('/passauth',(req,res)=>{
+  let userName = req.body.email;
+  let password = req.body.password;
+  let hostname = req.body.hostname;
+  let tenant = req.body.tenant;
+  let client_id = req.body.client_id;
+  let client_secret = req.body.client_secret;
+  //let access_token = req.body.access_token.replace(/(\r?\n|\r)/gm,"");
+  axios.post('https://'+hostname+'/idp/'+tenant+'/authn/token', 
+  "grant_type=client_credentials&client_id=" + client_id + "&client_secret=" + client_secret,
+ {
+  headers: {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    //"Authorization" : `Bearer ${access_token}` // bearer token from OPENID
+  }
+}
+).then(function(response) {
+  client_token = response.data.access_token; 
+      axios.post('https://'+hostname+'/idp/'+tenant+'/authn/token',  {
+        grant_type:'password',    
+        username: userName,
+        password:password,
+      }, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          "Authorization" : `Bearer ${client_token}` // bearer token from OPENID
+        }
+      }
+    ).then(function(response){
+      res.send(response?.data);
+      console.log(response?.data);
+    }).catch(function(error){
+       console.log(error);
+       //(!!error.response.data ? res.send(error.response.data): console.log('error!'))
+       res?.send(error?.response?.data)
+       
+    });
+
+  }, function(error) {
+    DataError = error;
+    res.send(DataError);
+  });
 
 
-
+});
 app.listen(4000,()=>{
     console.log('listening on port 4000')
 })
