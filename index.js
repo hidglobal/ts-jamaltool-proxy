@@ -295,10 +295,97 @@ app.post("/createAuthenticator",(req,res)=>{
 
   });
 
+// create OTP authenticator
+  app.post("/createotpAuthenticator",(req,res)=>{
+		
+    //initializing  
+    let hostname = req.body.hostname;
+    let tenant = req.body.tenant;
+    let access_token = req.body.access_token.replace(/(\r?\n|\r)/gm,"");
+    let userId = req.body.Email;
+    //console.log(passwordAuthenticator);
+    createAuthenticatorData = null;
+    createAuthenticatorDataError = null;
+    resetPasswordData = null;
+    resetPasswordDataError = null;
+    enableAuthenticatorData = null;
+    enableAuthenticatorDataError = null;
+    disableAuthenticatorData = null;
+    disableAuthenticatorDataError = null;
+    listOfAuthenticatorsDataError = null;
+    listOfAuthenticators = null;
+    
+    //find a User by externalId for whom an Authenticator will be created 
+    //The result will be in JSON and will contain arrays of users
+    
+    axios.post("https://"+hostname+"/scim/" + tenant + "/v2/Users/.search",
+      JSON.stringify({
+        "schemas" : [
+          "urn:ietf:params:scim:api:messages:2.0:SearchRequest"
+        ],
+        "filter" : "externalId eq \""+ userId + "\""// we pass the external ID of the user 
+      }),
+      {
+        headers : {
+          "Content-Type" : "application/scim+json",
+          "Authorization" : `Bearer ${access_token}` // bearer token from OPENID
+        }
+      }
+    )
+      .then(function(response) {
+        //if user was found, then Authenticator will be created, otherwise we will get error
+        if (response.data.resources.length > 0) {
+          //createAuthenticatorRequest(response.data.resources[0].id, nameAuthenticator);
+          //res.send(response.data.resources[0].id);
+          idUser = response.data.resources[0].id;
+            axios.post("https://"+hostname+"/scim/" + tenant + "/v2/Authenticator",
+              JSON.stringify({
+                "schemas" : [
+                  "urn:hid:scim:api:idp:2.0:Authenticator"
+                ],
+                "policy" : {
+                  "value" : "AT_OTP"
+                },
+                "status" : {
+                  "status" : "ENABLED",
+                  "expiryDate" : "2040-05-15T18:15:21+00:00",
+                  "startDate" : "2015-05-15T18:15:21+00:00"
+                },
+                "owner" : {
+                  "value" : idUser // the internal ID of the user (!= external ID), this ID is retrieved via the Users search endpoint
+                }
+              }),
+              {
+                headers : {
+                  "Content-Type" : "application/scim+json",
+                  "Authorization" :  `Bearer ${access_token.replace(/(\r?\n|\r)/gm,"")}`
+                }
+              }
+            ).then(function(response) {
+                
+                createAuthenticatorData = "Successfully created OTP authenticator for " + userId + " user.";
+                res.send(response.data);
+                console.log(createAuthenticatorData);
+                console.log(response);
+              }, function(error) {
+                res.send(error);
+              });
+          
+        } else {
+          createAuthenticatorDataError = "There are no User with id: " + userId ;//+ nameAuthenticator;
+          res.send(createAuthenticatorDataError);
+        }
+      }, function(error) {
+        createAuthenticatorDataError = error;
+        res.send(createAuthenticatorDataError);
+      });
+  
+    });
+  
 // Test Password Authenticator.
 
 app.post('/passauth',(req,res)=>{
-  let userName = req.body.email;
+  let userName = req.body.username;
   let password = req.body.password;
   let hostname = req.body.hostname;
   let tenant = req.body.tenant;
