@@ -368,7 +368,8 @@ app.post("/createAuthenticator",(req,res)=>{
                 console.log(createAuthenticatorData);
                 console.log(response);
               }, function(error) {
-                res.send(error);
+                res.send(error.response.data);
+                console.log(error);
               });
           
         } else {
@@ -376,7 +377,7 @@ app.post("/createAuthenticator",(req,res)=>{
           res.send(createAuthenticatorDataError);
         }
       }, function(error) {
-        createAuthenticatorDataError = error;
+        createAuthenticatorDataError = error.response.data;
         res.send(createAuthenticatorDataError);
       });
   
@@ -423,11 +424,135 @@ app.post('/passauth',(req,res)=>{
     });
 
   }, function(error) {
-    DataError = error;
-    res.send(DataError);
+    res?.send(error?.response?.data)
   });
 
 
+});
+
+// Clone a device to allow rooted device type.
+app.post('/clonedevice',(req,res)=>{
+  let userName = req.body.username;
+  let password = req.body.password;
+  let hostname = req.body.hostname;
+  let tenant = req.body.tenant;
+  let client_id = req.body.client_id;
+  let client_secret = req.body.client_secret;
+  let access_token = req.body.access_token.replace(/(\r?\n|\r)/gm,"");
+  axios.post('https://'+hostname+'/configuration/'+tenant+'/v2/Device/Type/?api-version=7',
+  {
+      "schemas": ["urn:hid:scim:api:idp:2.0:device:Type"],
+      "copyFrom": "DT_TDSV4",
+      "id": "DT_TD9ed",
+      "name": "Custom Mobile push based Validation",
+      "notes": "Custom Device type for Mobile push based Validation Application",
+  "urn:hid:scim:api:idp:2.0:device:type:Push": {
+                      "policyRule": "\"rules\":{\"refreshinterval\": 1440,\"version\": 1,\"provisioning\":[{\"ruleid\": 1,\"phonestates\": [{\"isRooted\": \"true\"}],\"outcome\": \"allow\"\"message\":\"Allowed to provision for Rooted device\"}]\n}",
+                  "custoFile":"InJ1bGVzIjogewogInZlcnNpb24iOiAxLAogInByb3Zpc2lvbmluZyI6IFsKIHsKICJydWxlaWQiOiAxLAogInBob25lc3RhdGVzIjogWwogewogIm9zIjogIkFuZHJvaWQiLAogImlzUm9vdGVkIjogInRydWUiCiB9CiBdLAogIm91dGNvbWUiOiAiYWxsb3ciLAogIm1lc3NhZ2UiOiAiQWxsb3dlZCB0byBwcm92aXNpb24gZm9yIEFuZHJvaWQiCiB9CiBdCn0="
+  
+  
+    }
+},
+ {
+  headers: {
+    'Content-Type': 'application/scim+json',
+    "Authorization" : `Bearer ${access_token}` // bearer token from OPENID
+  }
+}
+).then(function(response) {
+  console.log(response.data)
+
+  }, function(error) {
+    DataError = error;
+    console.log(error.data);
+    res?.send(error?.response?.data)
+  });
+
+
+});
+
+// Search for Device type and External ID.
+app.post('/sdevice',(req,res)=>{
+  let hostname = req.body.hostname;
+  let tenant = req.body.tenant;
+  let access_token = req.body.access_token.replace(/(\r?\n|\r)/gm,"");
+  let sPayload = req.body.sdevicePayload;
+  axios.post('https://'+hostname+'/scim/'+tenant+'/v2/Device/.search',sPayload,
+ {
+  headers: {
+    'Content-Type': 'application/scim+json',
+    "Authorization" : `Bearer ${access_token}` // bearer token from OPENID
+  }
+}
+).then(function(response) {
+  console.log(response.data)
+res.send(response.data)
+  }, function(error) {
+    DataError = error.message;
+    console.log(error);
+    res?.send(error?.response?.data)
+  });
+
+
+});
+
+// Assign Device
+app.post('/asdevice',(req,res)=>{
+  let hostname = req.body.hostname;
+  let tenant = req.body.tenant;
+  let access_token = req.body.access_token.replace(/(\r?\n|\r)/gm,"");
+  let sPayload = req.body.adevicePayload;
+  let deviceID = req.body.deviceiID;
+  axios.put('https://'+hostname+'/scim/'+tenant+'/v2/Device/'+deviceID,sPayload,
+ {
+  headers: {
+    'Content-Type': 'application/scim+json',
+    "Authorization" : `Bearer ${access_token}` // bearer token from OPENID
+  }
+}
+).then(function(response) {
+  console.log(response.data)
+res.send(response.data)
+  }, function(error) {
+
+    res?.send(error?.response?.data)
+  });
+
+
+});
+
+// OTP Authentication
+
+app.post('/otpauth',(req,res)=>{
+  let hostname = req.body.hostname;
+  let tenant = req.body.tenant;
+  let username = req.body.username;
+  let otppassword = req.body.password1;
+  let client_id = req.body.client_id;
+  let client_secret = req.body.client_secret;
+  if( hostname !== '' && tenant !== ''){
+      axios.post('https://'+hostname+'/idp/'+tenant+'/authn/token', {
+        mode:'SYNCHRONOUS',
+        authType:'AT_OTP',
+        grant_type:'password',
+        username:username,
+        password:otppassword,
+        client_id:client_id,
+        client_secret:client_secret,
+        
+        }, {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          }
+        }
+      ).then(function(response){
+        res.send(response?.data);
+        console.log(response?.data);
+      }).catch(function(error){
+         console.log(error);
+         res?.send(error?.response?.data)         
+      });
+  }
 });
 app.listen(4000,()=>{
     console.log('listening on port 4000')
