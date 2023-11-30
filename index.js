@@ -245,7 +245,6 @@ app.post("/createAuthenticator",(req,res)=>{
       //if user was found, then Authenticator will be created, otherwise we will get error
       if (response.data.resources.length > 0) {
         //createAuthenticatorRequest(response.data.resources[0].id, nameAuthenticator);
-        console.log(response.data.resources[0].id);
         idUser = response.data.resources[0].id;
           axios.post("https://"+hostname+"/scim/" + tenant + "/v2/Authenticator",
             JSON.stringify({
@@ -281,7 +280,8 @@ app.post("/createAuthenticator",(req,res)=>{
               console.log(createAuthenticatorData);
               console.log(response);
             }, function(error) {
-              res.send(error);
+              res?.send(error?.response?.data)
+              console.log(error?.response?.data);
             });
         
       } else {
@@ -431,6 +431,7 @@ app.post('/passauth',(req,res)=>{
 });
 
 // Clone a device to allow rooted device type.
+
 app.post('/clonedevice',(req,res)=>{
   let userName = req.body.username;
   let password = req.body.password;
@@ -438,21 +439,9 @@ app.post('/clonedevice',(req,res)=>{
   let tenant = req.body.tenant;
   let client_id = req.body.client_id;
   let client_secret = req.body.client_secret;
-  let access_token = req.body.access_token.replace(/(\r?\n|\r)/gm,"");
-  axios.post('https://'+hostname+'/configuration/'+tenant+'/v2/Device/Type/?api-version=7',
-  {
-      "schemas": ["urn:hid:scim:api:idp:2.0:device:Type"],
-      "copyFrom": "DT_TDSV4",
-      "id": "DT_TD9ed",
-      "name": "Custom Mobile push based Validation",
-      "notes": "Custom Device type for Mobile push based Validation Application",
-  "urn:hid:scim:api:idp:2.0:device:type:Push": {
-                      "policyRule": "\"rules\":{\"refreshinterval\": 1440,\"version\": 1,\"provisioning\":[{\"ruleid\": 1,\"phonestates\": [{\"isRooted\": \"true\"}],\"outcome\": \"allow\"\"message\":\"Allowed to provision for Rooted device\"}]\n}",
-                  "custoFile":"InJ1bGVzIjogewogInZlcnNpb24iOiAxLAogInByb3Zpc2lvbmluZyI6IFsKIHsKICJydWxlaWQiOiAxLAogInBob25lc3RhdGVzIjogWwogewogIm9zIjogIkFuZHJvaWQiLAogImlzUm9vdGVkIjogInRydWUiCiB9CiBdLAogIm91dGNvbWUiOiAiYWxsb3ciLAogIm1lc3NhZ2UiOiAiQWxsb3dlZCB0byBwcm92aXNpb24gZm9yIEFuZHJvaWQiCiB9CiBdCn0="
-  
-  
-    }
-},
+  let access_token = req.body.access_token.replace(/(?:\\[rn]|[\r\n]+)+/g, "");
+  let cPayload = req.body.cPayload;
+  axios.post('https://'+hostname+'/configuration/'+tenant+'/v2/Device/Type/?api-version=8',cPayload,
  {
   headers: {
     'Content-Type': 'application/scim+json',
@@ -461,13 +450,107 @@ app.post('/clonedevice',(req,res)=>{
 }
 ).then(function(response) {
   console.log(response.data)
-
+res.send(response.data);
   }, function(error) {
     DataError = error;
     console.log(error.data);
     res?.send(error?.response?.data)
   });
 
+
+});
+// Create a device
+app.post('/createdevice',(req,res)=>{
+  let hostname = req.body.hostname;
+  let tenant = req.body.tenant;
+  let client_id = req.body.client_id;
+  let client_secret = req.body.client_secret;
+  let access_token = req.body.access_token.replace(/(?:\\[rn]|[\r\n]+)+/g, "");
+  let body = req.body.bPayload;
+  console.log(access_token);
+  axios.post('https://'+hostname+'/scim/'+tenant+'/v2/Device/?api-version=7',body,
+ {
+  headers: {
+    'Content-Type': 'application/scim+json',
+    "Authorization" : `Bearer ${access_token}` // bearer token from OPENID
+  }
+}
+).then(function(response) {
+  console.log(response);
+  res.send(response.data);
+  }, function(error) {
+    console.log(error);
+    res?.send(error?.response?.data)
+  });
+
+});
+
+// Get a known device
+app.post('/getdevice',(req,res)=>{
+  let hostname = req.body.hostname;
+  let tenant = req.body.tenant;
+  let access_token = req.body.access_token.replace(/(?:\\[rn]|[\r\n]+)+/g, "");
+  let deviceID = req.body.deviceID;
+console.log(access_token);
+   axios.get('https://'+hostname+'/scim/'+tenant+'/v2/Device/'+deviceID+'?api-version=7',
+ {
+  headers: {
+    'Content-Type': 'application/scim+json',
+    "Authorization" : `Bearer ${access_token}` // bearer token from OPENID
+  }
+}
+).then(function(response) {
+  console.log(response);
+  res.send(response.data);
+  }, function(error) {
+    console.log(error);
+    res?.send(error?.response?.data)
+  });
+
+});
+// Assign a device to a user
+app.post('/assigndevice',(req,res)=>{
+  let hostname = req.body.hostname;
+  let tenant = req.body.tenant;
+  let access_token = req.body.access_token.replace(/(?:\\[rn]|[\r\n]+)+/g, "");
+  let deviceID = req.body.deviceID;
+  let jPayload = req.body.cPayload;
+   axios.put('https://'+hostname+'/scim/'+tenant+'/v2/Device/'+deviceID+'?api-version=7',jPayload,
+ {
+  headers: {
+    'Content-Type': 'application/scim+json',
+    "Authorization" : `Bearer ${access_token}` // bearer token from OPENID
+  }
+}
+).then(function(response) {
+  console.log(response);
+  res.send(response.data);
+  }, function(error) {
+    console.log(error);
+    res?.send(error?.response?.data)
+  });
+
+});
+// Provision device
+app.post('/provisiondevice',(req,res)=>{
+  let hostname = req.body.hostname;
+  let tenant = req.body.tenant;
+  let access_token = req.body.access_token.replace(/(?:\\[rn]|[\r\n]+)+/g, "");
+  let body = req.body.cPayload;
+  axios.post('https://'+hostname+'/scim/'+tenant+'/v2/Device/Provision/?api-version=7',body,
+ {
+  headers: {
+    'Content-Type': 'application/scim+json',
+    "Authorization" : `Bearer ${access_token}` // bearer token from OPENID
+  }
+}
+).then(function(response) {
+  console.log(response);
+  res.send(response.data);
+  }, function(error) {
+    console.log(error);
+    res?.send(error?.response?.data)
+  });
 
 });
 
