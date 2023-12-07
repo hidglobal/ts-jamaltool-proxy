@@ -402,7 +402,7 @@ app.post('/passauth',(req,res)=>{
   }
 }
 ).then(function(response) {
-  client_token = response.data.access_token; 
+  client_token = response.data.access_token;
       axios.post('https://'+hostname+'/idp/'+tenant+'/authn/token',  {
         grant_type:'password',    
         username: userName,
@@ -429,9 +429,156 @@ app.post('/passauth',(req,res)=>{
 
 
 });
+// Test HID Approve TOTP Authentication.
 
+app.post('/approvetotp',(req,res)=>{
+  let userName = req.body.username;
+  let password = req.body.password;
+  let hostname = req.body.hostname;
+  let tenant = req.body.tenant;
+  let client_id = req.body.client_id;
+  let client_secret = req.body.client_secret;
+  //let access_token = req.body.access_token.replace(/(\r?\n|\r)/gm,"");
+  axios.post('https://'+hostname+'/idp/'+tenant+'/authn/token', 
+  "grant_type=client_credentials&client_id=" + client_id + "&client_secret=" + client_secret,
+ {
+  headers: {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    //"Authorization" : `Bearer ${access_token}` // bearer token from OPENID
+  }
+}
+).then(function(response) {
+  client_token = response.data.access_token; 
+      axios.post('https://'+hostname+'/idp/'+tenant+'/authn/token',  {
+        grant_type:'password',    
+        username: userName,
+        mode:'SYNCHRONOUS',
+        authType:'AT_EMPOTP',
+        password:password,
+      }, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          "Authorization" : `Bearer ${client_token}` // bearer token from OPENID
+        }
+      }
+    ).then(function(response){
+      res.send(response?.data);
+      console.log(response?.data);
+    }).catch(function(error){
+       console.log(error);
+       //(!!error.response.data ? res.send(error.response.data): console.log('error!'))
+       res?.send(error?.response?.data)
+       
+    });
+
+  }, function(error) {
+    res?.send(error?.response?.data)
+  });
+
+
+});
+
+// Device List
+app.post('/devicelist',(req,res)=>{
+  let userid = req.body.userid;
+  let hostname = req.body.hostname;
+  let tenant = req.body.tenant;
+  let client_id = req.body.client_id;
+  let client_secret = req.body.client_secret;
+  let access_token = req.body.access_token;
+
+  //client_token = response.data.access_token.replace(/(?:\\[rn]|[\r\n]+)+/g, ""); 
+      axios.post('https://'+hostname+'/scim/'+tenant+'/v2/Users/.search', JSON.stringify({
+        "schemas" : [
+          "urn:ietf:params:scim:api:messages:2.0:SearchRequest"
+        ],
+        "filter" : "externalId eq \""+ userid + "\""// we pass the external ID of the user 
+      }), {
+        headers: {
+          'Content-Type': 'application/scim+json',
+          "Authorization" : `Bearer ${access_token}` // bearer token from OPENID
+        }
+      }
+    ).then(function(response){
+      
+      userinternalID = response.data.resources['0'].id;
+      axios.post('https://'+hostname+'/scim/'+tenant+'/v2/Device/.search', JSON.stringify({
+         "schemas": [
+              "urn:ietf:params:scim:api:messages:2.0:SearchRequest"
+          ],
+          "filter": "owner.value eq \""+userinternalID+"\"",
+          "sortBy": "id",
+          "sortOrder": "descending",
+          "startIndex": 0,
+          "count": 100
+       
+      }), {
+        headers: {
+          'Content-Type': 'application/scim+json',
+          "Authorization" : `Bearer ${access_token}` // bearer token from OPENID
+        }
+      }
+    ).then(function(response){
+      res.send(response?.data);
+    })
+    }).catch(function(error){
+       console.log(error);
+       //(!!error.response.data ? res.send(error.response.data): console.log('error!'))
+       res?.send(error?.response?.data)
+       
+    });
+
+
+
+
+});
+
+// Send Push Notification
+app.post('/bcauthorize',(req,res)=>{
+  let hostname = req.body.hostname;
+  let tenant = req.body.tenant;
+  let client_id = req.body.client_id;
+  let client_secret = req.body.client_secret;
+  let bcPayload = req.body.bcPayload;
+  //let access_token = req.body.access_token.replace(/(\r?\n|\r)/gm,"");
+  axios.post('https://'+hostname+'/idp/'+tenant+'/authn/token', 
+  "grant_type=client_credentials&client_id=" + client_id + "&client_secret=" + client_secret,
+ {
+  headers: {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    //"Authorization" : `Bearer ${access_token}` // bearer token from OPENID
+  }
+}
+).then(function(response) {
+  client_token = response.data.access_token.replace(/(?:\\[rn]|[\r\n]+)+/g, "");
+      axios.post('https://'+hostname+'/idp/'+tenant+'/authn/bcauthorize', bcPayload, {
+        headers: {
+          'Content-Type': 'application/json',
+          "Authorization" : `Bearer ${client_token}` // bearer token from OPENID
+        }
+      }
+    ).then(function(response){
+      res.send(response?.data);
+      console.log(response?.data);
+    }).catch(function(error){
+       console.log(error);
+       //(!!error.response.data ? res.send(error.response.data): console.log('error!'))
+       res?.send(error?.response?.data)
+       
+    });
+
+  }, function(error) {
+    res?.send(error?.response?.data)
+  });
+
+
+});
+// Recieve callback CIBA
+
+app.post('callbackurl',(req,res)=>{
+  
+});
 // Clone a device to allow rooted device type.
-
 app.post('/clonedevice',(req,res)=>{
   let userName = req.body.username;
   let password = req.body.password;
