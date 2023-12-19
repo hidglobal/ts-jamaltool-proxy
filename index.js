@@ -575,7 +575,8 @@ app.post('/bcauthorize',(req,res)=>{
 });
 // Recieve callback CIBA
 
-app.post('callbackurl',(req,res)=>{
+app.post('/callback_url',(req,res)=>{
+
   
 });
 // Clone a device to allow rooted device type.
