@@ -4,6 +4,11 @@ const axios = require('axios');
 const app = express();
 var cors = require('cors');
 const req = require('express/lib/request');
+const wserver = require('socket.io');
+
+const io = new wserver(5000);
+
+
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -577,7 +582,17 @@ app.post('/bcauthorize',(req,res)=>{
 
 app.post('/callback_url',(req,res)=>{
 
-  
+const idtoken = req.body.id_token;
+function parseJwt (token) {
+    return JSON.parse(Buffer.from(token?.split('.')[1], 'base64')?.toString());
+}
+const parsed_token = parseJwt(idtoken);
+console.log(parsed_token);
+res.send(parsed_token);
+io.on("connection", (socket) => {
+  socket.emit('clientstatus',parsed_token);
+});
+
 });
 // Clone a device to allow rooted device type.
 app.post('/clonedevice',(req,res)=>{
