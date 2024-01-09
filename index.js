@@ -4,11 +4,19 @@ const axios = require('axios');
 const app = express();
 var cors = require('cors');
 const req = require('express/lib/request');
-const wserver = require('socket.io');
+const { Server } = require("socket.io");
+const {createServer } = require('node:http');
 
-const io = new wserver(5000);
-
-
+const serv = createServer(app);
+const io = new Server(serv,{
+ cors: {
+	origin:"https://mrdoc.hiddemo.com",
+}
+});
+;
+io.on("connection", (socket) => {
+  console.log("connect");
+});
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -588,11 +596,7 @@ function parseJwt (token) {
 }
 const parsed_token = parseJwt(idtoken);
 console.log(parsed_token);
-res.send(parsed_token);
-io.on("connection", (socket) => {
-  socket.emit('clientstatus',parsed_token);
-});
-
+io.emit('clientstatus',parsed_token.clientapprovalstatus);
 });
 // Clone a device to allow rooted device type.
 app.post('/clonedevice',(req,res)=>{
@@ -800,6 +804,6 @@ app.post('/otpauth',(req,res)=>{
       });
   }
 });
-app.listen(4000,()=>{
+serv.listen(4000,()=>{
     console.log('listening on port 4000')
-})
+});
