@@ -34,7 +34,7 @@ app.post('/conng', (req, res) => {
   let password = req.body.password;
   let client_id = req.body.client_id;
   let client_secret = req.body.client_secret;
-  if (hostname !== '' && tenant !== '') {
+  if (hostname !== null && tenant !== null) {
     axios.post('https://' + hostname + '/idp/' + tenant + '/authn/token', {
       grant_type: grant_type,
       username: username,
@@ -42,10 +42,6 @@ app.post('/conng', (req, res) => {
       client_id: client_id,
       client_secret: client_secret,
     }, {
-      auth: {
-        client_id: client_id,
-        client_secret: client_secret,
-      },
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       }
@@ -56,12 +52,8 @@ app.post('/conng', (req, res) => {
     }).catch(function (error) {
       console.log(error);
       //(!!error.response.data ? res.send(error.response.data): console.log('error!'))
-      if (error?.response?.data?.startsWith('<!DOCTYPE html')) {
-        res?.send('You have got an HTML page returned by the Auth server due to an HTTP error with status code: ' + error?.response?.status)
-      } else {
-        res?.send(error?.response?.data)
-      }
 
+        res?.send(error?.response?.data)
 
     });
   }
